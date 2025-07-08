@@ -78,6 +78,8 @@ else:
     my_logging(f'Binding to unicast port: {OWL_LISTEN_IP}:{OWL_PORT}')
     sock.bind((OWL_LISTEN_IP, OWL_PORT))
 
+last_config_publish = 0
+
 while True:
     client.loop()
     my_logging('Connected: ' + str(Connected))
