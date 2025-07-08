@@ -47,13 +47,14 @@ OWL_MULTICAST = config['owl']['owl_multicast']
 
 broker_address = config['mqtt']['address']
 broker_port = int(config['mqtt']['port'])
-broker_username = config['mqtt']['username']
-broker_password = config['mqtt']['password']
+broker_username = config['mqtt'].get('username')
+broker_password = config['mqtt'].get('password')
 
 my_logging('Starting owl2mqtt on ip: ' + OWL_LISTEN_IP)
 
 client = mqttClient.Client("owl2mqtt client")
-client.username_pw_set(broker_username, password=broker_password)
+if broker_username and broker_password:
+    client.username_pw_set(broker_username, password=broker_password)
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.on_publish = on_publish
