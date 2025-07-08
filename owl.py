@@ -32,7 +32,7 @@ def on_publish(client, userdata, result):             #create function for callb
         my_logging('Data published result: ' + str(result))
     pass
 
-logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, force=True)
 
 config = configparser.ConfigParser()
 config.read('owl2mqtt.conf')
@@ -43,7 +43,7 @@ DEBUG = int(config['global']['debug'])
 OWL_PORT = int(config['owl']['owl_port'])
 OWL_GROUP = config['owl']['owl_group']
 OWL_LISTEN_IP = config['owl']['owl_listen_ip']
-OWL_MULTICAST = config['owl']['owl_multicast']
+OWL_MULTICAST = int(config['owl']['owl_multicast'])
 
 broker_address = config['mqtt']['address']
 broker_port = int(config['mqtt']['port'])
@@ -65,13 +65,17 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 if OWL_MULTICAST == 1:
+    my_logging('Binding to multicast port: ' + str(OWL_GROUP, OWL_PORT))
     sock.bind((OWL_GROUP, OWL_PORT))
+    my_logging('Adding membership')
     mreq = struct.pack(
         '4sl' if OWL_LISTEN_IP == '' else '4s4s',
         socket.inet_aton(OWL_GROUP),
         socket.INADDR_ANY if OWL_LISTEN_IP == '' else socket.inet_aton(OWL_LISTEN_IP))
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    my_logging('All ready')
 else:
+    my_logging('Binding to unicast post: ' + str(OWL_LISTEN_IP, OWL_PORT))
     sock.bind((OWL_LISTEN_IP, OWL_PORT))
 
 while True:
