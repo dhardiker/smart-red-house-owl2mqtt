@@ -65,7 +65,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 if OWL_MULTICAST == 1:
-    my_logging('Binding to multicast port: ' + str(OWL_GROUP, OWL_PORT))
+    my_logging(f'Binding to multicast port: {OWL_GROUP}:{OWL_PORT}')
     sock.bind((OWL_GROUP, OWL_PORT))
     my_logging('Adding membership')
     mreq = struct.pack(
@@ -75,7 +75,7 @@ if OWL_MULTICAST == 1:
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     my_logging('All ready')
 else:
-    my_logging('Binding to unicast post: ' + str(OWL_LISTEN_IP, OWL_PORT))
+    my_logging(f'Binding to unicast port: {OWL_LISTEN_IP}:{OWL_PORT}')
     sock.bind((OWL_LISTEN_IP, OWL_PORT))
 
 while True:
