@@ -230,8 +230,75 @@ while True:
                 client.publish("owl/"+root.tag+"/channel"+chan_value, current_value)
                 client.publish("owl/"+root.tag+"/daychannel"+chan_value, day_value)
 
-            client.publish("owl/"+root.tag+"/channel_total", total_power)
-            client.publish("owl/"+root.tag+"/daychannel_total", total_energy_today)
+            # Round to 2 decimal places for power and energy values
+            client.publish("owl/"+root.tag+"/channel_total", round(total_power, 2))
+            client.publish("owl/"+root.tag+"/daychannel_total", round(total_energy_today, 2))
+
+            # At most once a minute, publish the Home Assistant compatible config MQTT messages
+            if time.time() - last_config_publish > 60:
+                last_config_publish = time.time()
+
+                config_data = [
+                    {
+                        "name": "Grid Phase 1 Power",
+                        "id_prefix": "phase1_power",
+                        "state_suffix": "channel0",
+                    },
+                    {
+                        "name": "Grid Phase 2 Power",
+                        "id_prefix": "phase2_power",
+                        "state_suffix": "channel1",
+                    },
+                    {
+                        "name": "Grid Phase 3 Power",
+                        "id_prefix": "phase3_power",
+                        "state_suffix": "channel2",
+                    },
+                    {
+                        "name": "Grid Combined Power",
+                        "id_prefix": "combined_power",
+                        "state_suffix": "channel_total",
+                    },
+                    {
+                        "name": "Grid Phase 1 Energy Today",
+                        "id_prefix": "phase1_energy_today",
+                        "state_suffix": "daychannel0",
+                    },
+                    {
+                        "name": "Grid Phase 2 Energy Today",
+                        "id_prefix": "phase2_energy_today",
+                        "state_suffix": "daychannel1",
+                    },
+                    {
+                        "name": "Grid Phase 3 Energy Today",
+                        "id_prefix": "phase3_energy_today",
+                        "state_suffix": "daychannel2",
+                    },
+                    {
+                        "name": "Grid Combined Energy Today",
+                        "id_prefix": "combined_energy_today",
+                        "state_suffix": "daychannel_total",
+                    }
+                ]
+              
+                for each_config in each_config_data:
+                    topic = f"homeassistant/sensor/owl_grid_{each_config['id_prefix']}/config"
+                    payload = {
+                        "name": each_config["name"],
+                        "unique_id": f"owl_grid_{each_config['id_prefix']}",
+                        "state_topic": f"owl/{root.tag}/{each_config['state_suffix']}",
+                        "unit_of_measurement": "W" if "power" in each_config["id_prefix"] else "kWh",
+                        "device_class": "power" if "power" in each_config["id_prefix"] else "energy",
+                        "state_class": "measurement",
+                        "value_template": "{{ value | float }}",
+                        "device": {
+                            "identifiers": ["owlcm180"],
+                            "name": "OWL Intuition CM180",
+                            "model": "CM180"
+                        }
+                    }
+                    client.publish(topic, json.dumps(payload), qos=1, retain=True)
+                    my_logging(f'Published Home Assistant config for {each_config["name"]} to {topic}')
     else:
         client.connect(broker_address, port=broker_port)
         time.sleep(5)
