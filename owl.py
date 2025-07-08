@@ -87,7 +87,100 @@ while True:
         # Collect the XML multicast message
         xml, addr = sock.recvfrom(1024)
         # Parse the XML string
+        #
+        # It should follow this format:
+        #   https://theowl.zendesk.com/hc/en-gb/article_attachments/200344663
+        # found from the OWL documentation at:
+        #   https://theowl.zendesk.com/hc/en-gb/articles/201284603-Multicast-UDP-API-Information
+        #
+        # e.g.
+        # <electricity id='443719999999'>
+        #   <signal rssi='-71' lqi='127' />
+        #   <battery level='100%' />
+        #   <chan id='0'><curr units='w'>483.00</curr><day units='wh'>10244.99</day></chan>
+        #   <chan id='1'><curr units='w'>0.00</curr><day units='wh'>0.00</day></chan>
+        #   <chan id='2'><curr units='w'>0.00</curr><day units='wh'>0.00</day></chan>
+        # </electricity>
+        #
+        # it should be translated into MQTT messages like:
+        #   topic                            sample data
+        #   `owl/electricity/timestamp`      `1234567890`
+        #   `owl/electricity/battery`        `100%`
+        #   `owl/electricity/rssi`           `-71`
+        #   `owl/electricity/lqi`            `127`
+        #   `owl/electricity/channel0`       `483.0`
+        #   `owl/electricity/daychannel0`    `10244.99`
+        #   `owl/electricity/channel1`       `0.0`
+        #   `owl/electricity/daychannel1`    `0.0`
+        #   `owl/electricity/channel2`       `0.0`
+        #   `owl/electricity/daychannel2`    `0.0`
+        #
+        # the configuration for a CM180 should be broadcast in Home Assistant compatible MQTT messages like:
+        #   power topic: `homeassistant/sensor/owl_grid_phase1_power/config`
+        # ```json
+        # {
+        #   "name": "Grid Phase 1 Power",
+        #   "unique_id": "owl_grid_phase1_power",
+        #   "state_topic": "owl/electricity/channel0",
+        #   "unit_of_measurement": "W",
+        #   "device_class": "power",
+        #   "state_class": "measurement",
+        #   "value_template": "{{ value | float }}",
+        #   "device": {
+        #     "identifiers": ["owlcm180"],
+        #     "name": "OWL Intuition CM180",
+        #     "model": "CM180"
+        #   }
+        # }
+        # ```
+        # and the same for `owl_grid_phase2_power` on `channel1` and `owl_grid_phase3_power` on `channel2`.
+        # We also publish the combined power on `owl_grid_combined_power` which sums all three channels.
+        #
+        #   energy today topic: `homeassistant/sensor/owl_grid_phase1_energy_today/config`
+        # ```json
+        # {
+        #   "name": "Grid Phase 1 Energy Today",
+        #   "unique_id": "owl_grid_phase1_energy_today",
+        #   "state_topic": "owl/electricity/daychannel0",
+        #   "unit_of_measurement": "kWh",
+        #   "device_class": "energy",
+        #   "state_class": "measurement",
+        #   "value_template": "{{ value | float / 1000 }}",
+        #   "device": {
+        #     "identifiers": ["owlcm180"],
+        #     "name": "OWL Intuition CM180",
+        #     "model": "CM180"
+        #   }
+        # }
+        # ```
+        # and the same for `owl_grid_phase2_energy_today` on `daychannel1` and `owl_grid_phase3_energy_today` on `daychannel2`.
+        # We also publish the combined energy today on `owl_grid_combined_energy_today` which sums all three channels.
+        #
+        # As the `daychannel` values reset at midnight each day, we need to configure utility meters in Home Assistant.
+        # Something like this in the Home Assistant `configuration.yaml`:
+        # ```yaml
+        # utility_meter:
+        #   grid_energy_phase1:
+        #     source: sensor.owl_grid_phase1_energy_today
+        #     name: Grid Phase 1 Total
+        #     cycle: daily
+        #   grid_energy_phase2:
+        #     source: sensor.owl_grid_phase2_energy_today
+        #     name: Grid Phase 2 Total
+        #     cycle: daily
+        #   grid_energy_phase3:
+        #     source: sensor.owl_grid_phase3_energy_today
+        #     name: Grid Phase 3 Total
+        #     cycle: daily
+        #   grid_energy_total:
+        #     source: sensor.owl_grid_combined_energy_today
+        #     name: Grid Total Energy
+        #     cycle: daily
+
         root = ElementTree.fromstring(xml)
+
+        # Output the XML to debug log
+        my_logging('Received XML: ' + ElementTree.tostring(root, encoding='unicode'))
 
         if root.tag == 'electricity' or root.tag == 'solar':
         
@@ -114,6 +207,9 @@ while True:
             client.publish("owl/"+root.tag+"/rssi", signal_rssi_value)
             client.publish("owl/"+root.tag+"/lqi", signal_lqi_value)
 
+            total_power = 0.0
+            total_energy_today = 0.0
+
             for chan in root.iter('chan'):
                 chan_value = 0
                 chan_value = chan.attrib["id"]
@@ -128,8 +224,14 @@ while True:
                 if day is not None:
                     day_value = float(day.text)
 
+                total_power += current_value
+                total_energy_today += day_value
+
                 client.publish("owl/"+root.tag+"/channel"+chan_value, current_value)
                 client.publish("owl/"+root.tag+"/daychannel"+chan_value, day_value)
+
+            client.publish("owl/"+root.tag+"/channel_total", total_power)
+            client.publish("owl/"+root.tag+"/daychannel_total", total_energy_today)
     else:
         client.connect(broker_address, port=broker_port)
         time.sleep(5)
