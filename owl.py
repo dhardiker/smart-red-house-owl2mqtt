@@ -283,7 +283,7 @@ while True:
                     }
                 ]
               
-                for each_config in each_config_data:
+                for each_config in config_data:
                     topic = f"homeassistant/sensor/owl_grid_{each_config['id_prefix']}/config"
                     payload = {
                         "name": each_config["name"],
