@@ -291,7 +291,7 @@ while True:
                         "state_topic": f"owl/{root.tag}/{each_config['state_suffix']}",
                         "unit_of_measurement": "W" if "power" in each_config["id_prefix"] else "kWh",
                         "device_class": "power" if "power" in each_config["id_prefix"] else "energy",
-                        "state_class": "measurement",
+                        "state_class": "measurement" if "power" in each_config["id_prefix"] else "total_increasing",
                         "value_template": "{{ value | float }}",
                         "device": {
                             "identifiers": ["owlcm180"],
