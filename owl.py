@@ -8,6 +8,17 @@ from xml.etree import ElementTree
 import syslog
 import logging, sys
 
+# fetch settings from environment variables
+DEBUG = int(os.getenv('OWL2MQTT_DEBUG', '0'))
+OWL_PORT = int(os.getenv('OWL2MQTT_OWL_PORT', '22600'))
+OWL_GROUP = os.getenv('OWL2MQTT_OWL_GROUP', '224.192.32.19')
+OWL_LISTEN_IP = os.getenv('OWL2MQTT_OWL_LISTEN_IP', '')
+OWL_MULTICAST = int(os.getenv('OWL2MQTT_OWL_MULTICAST', '1'))
+broker_address = os.getenv('OWL2MQTT_MQTT_ADDRESS', 'localhost')
+broker_port = int(os.getenv('OWL2MQTT_MQTT_PORT', '1883'))
+broker_username = os.getenv('OWL2MQTT_MQTT_USERNAME')
+broker_password = os.getenv('OWL2MQTT_MQTT_PASSWORD')
+
 Connected = 0
 
 def my_logging(msg):
@@ -33,17 +44,6 @@ def on_publish(client, userdata, result):             #create function for callb
     pass
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, force=True)
-
-# fetch settings from environment variables
-DEBUG = int(os.getenv('OWL2MQTT_DEBUG', '0'))
-OWL_PORT = int(os.getenv('OWL2MQTT_OWL_PORT', '22600'))
-OWL_GROUP = os.getenv('OWL2MQTT_OWL_GROUP', '224.192.32.19')
-OWL_LISTEN_IP = os.getenv('OWL2MQTT_OWL_LISTEN_IP', '')
-OWL_MULTICAST = int(os.getenv('OWL2MQTT_OWL_MULTICAST', '1'))
-broker_address = os.getenv('OWL2MQTT_MQTT_ADDRESS', 'localhost')
-broker_port = int(os.getenv('OWL2MQTT_MQTT_PORT', '1883'))
-broker_username = os.getenv('OWL2MQTT_MQTT_USERNAME')
-broker_password = os.getenv('OWL2MQTT_MQTT_PASSWORD')
 
 my_logging('Starting owl2mqtt on ip: ' + OWL_LISTEN_IP)
 

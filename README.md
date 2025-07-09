@@ -9,7 +9,7 @@ By default, it listen in multicast OWL address, but it you configure the push no
 # Configuration
 All configuration is set through environment variables.
 
-You can set `OWL2MQTT_OWL_DEBUG` to `1` in order to get logging on `stderr` (which you'll see in the docker output).
+You can set `OWL2MQTT_DEBUG` to `1` in order to get logging on `stderr` (which you'll see in the docker output).
 
 ## Data from OWL Intuition
 The OWL Intution devices can send their data out on the local network. By default, this is by multicast to group `224.192.32.19` on port `22600`. You can change this at https://www.owlintuition.com/ by going to `System > Advanced Settings > Setup Data Push` and setting the `IP Address` and `Port Number`.
