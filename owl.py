@@ -3,7 +3,7 @@ import socket
 import struct
 import json
 import time
-import configparser
+import os
 from xml.etree import ElementTree
 import syslog
 import logging, sys
@@ -34,21 +34,16 @@ def on_publish(client, userdata, result):             #create function for callb
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, force=True)
 
-config = configparser.ConfigParser()
-config.read('owl2mqtt.conf')
-
-# for debugging only
-DEBUG = int(config['global']['debug'])
-
-OWL_PORT = int(config['owl']['owl_port'])
-OWL_GROUP = config['owl']['owl_group']
-OWL_LISTEN_IP = config['owl']['owl_listen_ip']
-OWL_MULTICAST = int(config['owl']['owl_multicast'])
-
-broker_address = config['mqtt']['address']
-broker_port = int(config['mqtt']['port'])
-broker_username = config['mqtt'].get('username')
-broker_password = config['mqtt'].get('password')
+# fetch settings from environment variables
+DEBUG = int(os.getenv('OWL2MQTT_DEBUG', '0'))
+OWL_PORT = int(os.getenv('OWL2MQTT_OWL_PORT', '22600'))
+OWL_GROUP = os.getenv('OWL2MQTT_OWL_GROUP', '224.192.32.19')
+OWL_LISTEN_IP = os.getenv('OWL2MQTT_OWL_LISTEN_IP', '')
+OWL_MULTICAST = int(os.getenv('OWL2MQTT_OWL_MULTICAST', '1'))
+broker_address = os.getenv('OWL2MQTT_MQTT_ADDRESS', 'localhost')
+broker_port = int(os.getenv('OWL2MQTT_MQTT_PORT', '1883'))
+broker_username = os.getenv('OWL2MQTT_MQTT_USERNAME')
+broker_password = os.getenv('OWL2MQTT_MQTT_PASSWORD')
 
 my_logging('Starting owl2mqtt on ip: ' + OWL_LISTEN_IP)
 

@@ -6,44 +6,60 @@ This program can be used to parse OWL Intuition packets (https://www.theowl.com/
 
 By default, it listen in multicast OWL address, but it you configure the push notifications (in https://www.owlintuition.com/) your server, you can listen in unicast by defining the owl\_multicast=0 and owl\_listen\_ip.
 
+# Configuration
+All configuration is set through environment variables.
+
+You can set `OWL2MQTT_OWL_DEBUG` to `1` in order to get logging on `stderr` (which you'll see in the docker output).
+
+## Data from OWL Intuition
+The OWL Intution devices can send their data out on the local network. By default, this is by multicast to group `224.192.32.19` on port `22600`. You can change this at https://www.owlintuition.com/ by going to `System > Advanced Settings > Setup Data Push` and setting the `IP Address` and `Port Number`.
+
+Use this configuration to either pass the following environment variables:
+* Multicast (default)
+    ```sh
+    OWL2MQTT_OWL_MULTICAST=1
+    OWL2MQTT_OWL_GROUP=224.192.32.19
+    OWL2MQTT_OWL_PORT=22600
+    ```
+* Unicast
+    ```sh
+    OWL2MQTT_OWL_MULTICAST=0
+    OWL2MQTT_OWL_LISTEN_IP=10.0.0.5
+    OWL2MQTT_OWL_PORT=22600
+    ```
+
+## Data to MQTT
+You set the MQTT broker server as follows:
+```sh
+OWL2MQTT_MQTT_ADDRESS=10.0.0.8
+OWL2MQTT_MQTT_PORT=1883
+OWL2MQTT_MQTT_USERNAME=optional-username
+OWL2MQTT_MQTT_PASSWORD=optional-password
+```
+
+It will publish the state to the `/owl` topic and configuration to `/homeassistant/sensor`. If Home Assistant is listening to the MQTT broker, it will auto configure and appear as the `OWL Intution` device.
+
+This currently presumes a CM180 device.
+
 # Installation
-Clone the repo
-```
-cd /opt
-sudo git clone https://github.com/fapgomes/owl2mqtt.git
-```
-Copy the sample config file, and put your own configurations (leave owl_listen_ip blank, if you don't known)
-```
-cd /opt/owl2mqtt/
-sudo cp owl2mqtt.conf-sample owl2mqtt.conf
-```
-Create the system file
-```sudo vi /etc/systemd/system/owl2mqtt.service```
-And add the following to this file:
-```
-[Unit]
-Description=owl2mqtt
-After=network.target
+1. Clone the repo
+    ```sh
+    cd /opt
+    sudo git clone https://github.com/fapgomes/owl2mqtt.git
+    ```
+2. Build the Docker Image
+    ```sh
+    docker build -t owl2mqtt .
+    ```
+3. Run the Docker Container in the foreground with the desired configuration
+    ```sh
+    docker run --net=host \
+      -e OWL2MQTT_MQTT_ADDRESS=... \
+      -e OWL2MQTT_OWL_MULTICAST=... \
+      -e OWL2MQTT_DEBUG=... \
+      owl2mqtt
+    ```
 
-[Service]
-ExecStart=/usr/bin/python3 /opt/owl2mqtt/owl.py
-WorkingDirectory=/opt/owl2mqtt
-StandardOutput=inherit
-StandardError=inherit
-Restart=always
-User=openhab
-
-[Install]
-WantedBy=multi-user.target
-```
-Reload systemd daemon
-```
-sudo systemctl daemon-reload
-```
-Start the service
-```
-sudo systemctl start owl2mqtt
-```
 # openhab mqtt config example
 owl.things
 ```
