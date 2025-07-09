@@ -7,6 +7,7 @@ import os
 from xml.etree import ElementTree
 import syslog
 import logging, sys
+import signal
 
 # fetch settings from environment variables
 DEBUG = int(os.getenv('OWL2MQTT_DEBUG', '0'))
@@ -22,7 +23,7 @@ broker_password = os.getenv('OWL2MQTT_MQTT_PASSWORD')
 Connected = 0
 
 def my_logging(msg):
-    if DEBUG :
+    if DEBUG == 1:
         logging.debug(msg)
     syslog.syslog(syslog.LOG_INFO, msg)
 
@@ -72,6 +73,21 @@ if OWL_MULTICAST == 1:
 else:
     my_logging(f'Binding to unicast port: {OWL_LISTEN_IP}:{OWL_PORT}')
     sock.bind((OWL_LISTEN_IP, OWL_PORT))
+
+# setup graceful shutdown
+def handle_shutdown(signum, frame):
+    my_logging(f'Received signal {signum}, shutting down')
+    try:
+        sock.close()
+    except Exception:
+        pass
+    try:
+        client.disconnect()
+    except Exception:
+        pass
+    sys.exit(0)
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
 
 last_config_publish = 0
 
